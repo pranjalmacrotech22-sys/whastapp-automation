@@ -1,0 +1,21 @@
+{
+  "name": "whatsapp-automation-render",
+  "version": "1.0.0",
+  "description": "WhatsApp automation service for watching folders.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.4",
+    "chokidar": "^3.5.3",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.2",
+    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#webpack-exodus",
+    "xml2js": "^0.6.2"
+  }
+}

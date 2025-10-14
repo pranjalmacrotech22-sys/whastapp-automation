@@ -1,0 +1,251 @@
+/* --- Global Styles & Dual-Color Neumorphic Theme --- */
+:root {
+    --primary-color: #e0f2f1; /* Light pastel green */
+    --secondary-color: #e3f2fd; /* Light pastel blue */
+    --card-bg: #ebf5f3; /* A neutral, very light green-blue for the card */
+    --accent-color: #075E54; /* Dark green for text accents */
+    --text-color: #546e7a; /* Muted dark slate */
+    --text-light: #78909c;
+    --shadow-dark: #c8d0d0; /* Dark shadow for the neutral card */
+    --shadow-light: #ffffff;
+    --font-family: 'Poppins', sans-serif;
+    --border-radius: 20px;
+    --transition-speed: 0.3s;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    /* DUAL-COLOR: Gradient background from blue to green */
+    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: var(--text-color);
+}
+
+/* --- Main Card Layout --- */
+.card-container {
+    width: 100%;
+    max-width: 450px;
+    background: var(--card-bg); /* Neutral card color */
+    border-radius: var(--border-radius);
+    box-shadow: 
+        10px 10px 20px var(--shadow-dark),
+        -10px -10px 20px var(--shadow-light);
+    padding: 2.5rem;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- Animation & Form Step Management --- */
+.form-step {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease-out;
+}
+.form-step.active {
+    display: block;
+    opacity: 1;
+}
+
+/* --- Headers --- */
+.form-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+.form-header h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--accent-color); /* Using accent for header */
+}
+
+/* --- Neumorphic Form Elements --- */
+.form-group {
+    margin-bottom: 2rem;
+}
+label {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 50px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    background: var(--card-bg);
+    box-shadow: 
+        inset 5px 5px 10px var(--shadow-dark),
+        inset -5px -5px 10px var(--shadow-light);
+    transition: box-shadow var(--transition-speed);
+    color: var(--text-color);
+}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    outline: none;
+    box-shadow: 
+        inset 7px 7px 12px var(--shadow-dark),
+        inset -7px -7px 12px var(--shadow-light);
+}
+::placeholder {
+    color: var(--text-light);
+}
+
+/* --- Buttons --- */
+.btn {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    color: var(--accent-color); /* DUAL-COLOR: Button text is dark green */
+    background: var(--card-bg);
+    box-shadow: 
+        8px 8px 15px var(--shadow-dark),
+        -8px -8px 15px var(--shadow-light);
+}
+.btn:hover {
+    color: #043c36; /* Slightly darker green on hover */
+}
+.btn:active {
+    box-shadow: 
+        inset 5px 5px 10px var(--shadow-dark),
+        inset -5px -5px 10px var(--shadow-light);
+    font-size: 0.98rem;
+}
+.btn:disabled {
+    box-shadow: none;
+    background: #e1e9e7;
+    color: var(--text-light);
+    cursor: not-allowed;
+}
+
+/* --- Checkbox and Links --- */
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+}
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+input[type="checkbox"] {
+    display: none;
+}
+input[type="checkbox"] + label {
+    position: relative;
+    padding-left: 30px;
+    margin: 0;
+    color: var(--text-light);
+}
+input[type="checkbox"] + label::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background: var(--card-bg);
+    border-radius: 5px;
+    box-shadow: 
+        inset 2px 2px 4px var(--shadow-dark),
+        inset -2px -2px 4px var(--shadow-light);
+}
+input[type="checkbox"]:checked + label::after {
+    content: '✔';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: var(--accent-color); /* DUAL-COLOR: Checkmark is dark green */
+}
+.forgot-password {
+    color: var(--text-light);
+    text-decoration: none;
+}
+.forgot-password:hover {
+    color: #29b6f6; /* DUAL-COLOR: Forgot password link has blue hover */
+    text-decoration: none;
+}
+
+/* --- Error Messages --- */
+.error-message {
+    text-align: center;
+    color: #e53935;
+    margin-top: 1.5rem;
+    min-height: 1.2em;
+    font-size: 0.9rem;
+}
+
+/* --- Main App Screen Specifics --- */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+.user-info {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+#loggedInUser {
+    font-weight: 600;
+    color: var(--text-color);
+}
+.btn-secondary {
+    width: auto;
+    padding: 0.6rem 1.2rem;
+    color: var(--text-light);
+}
+.btn-danger {
+    box-shadow: none;
+    background: #ffcdd2;
+    color: #c62828;
+}
+.btn-danger:hover {
+    background: #ef9a9a;
+}
+.button-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+#status-container, .status-log {
+    margin-top: 1.5rem;
+}
+#log {
+    background: var(--card-bg);
+    box-shadow: 
+        inset 5px 5px 10px var(--shadow-dark),
+        inset -5px -5px 10px var(--shadow-light);
+    border-radius: var(--border-radius);
+    height: 120px;
+    overflow-y: auto;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
