@@ -27,13 +27,7 @@ const watchers = new Map();
 const processingQueue = [];
 let isWorkerRunning = false;
 
-// --- [NEW FIX] Create session directory if it doesn't exist ---
-// This ensures that whatsapp-web.js has a place to store session files
-// on Render's persistent disk, preventing a "permission denied" error.
-const sessionsPath = path.join('/data', 'wa-sessions');
-fs.ensureDirSync(sessionsPath);
-console.log(`Session directory ensured at: ${sessionsPath}`);
-// --- [END OF NEW FIX] ---
+// NOTE: The code to create the directory has been removed as it was causing the crash.
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -85,7 +79,8 @@ io.on('connection', (socket) => {
             const newClient = new Client({
                 authStrategy: new LocalAuth({
                     clientId: clientId,
-                    dataPath: sessionsPath // Use the path we ensured exists
+                    // --- [FINAL FIX] Point directly to the root of the persistent disk ---
+                    dataPath: '/data'
                 }),
                 puppeteer: {
                     headless: true,
