@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require("socket.io");
 const { Client, MessageMedia, LocalAuth } = require('whatsapp-web.js');
 const fs = require('fs-extra');
-const path = require('path'); // <-- ADDED: path module is needed
+const path = require('path');
 const xml2js = require('xml2js');
 const qrcode = require('qrcode');
 const chokidar = require('chokidar');
@@ -12,21 +12,28 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const port = process.env.PORT || 3000; // <-- CHANGED: Use port from environment variable
+const port = process.env.PORT || 3000;
 
 // --- Supabase Setup ---
 const supabaseUrl = 'https://xcglljpdnofeipgytigz.supabase.co';
-// <-- CHANGED: Use environment variable for the secret key
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// <-- CHANGED: Serve static files from the 'public' directory
+// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 const clients = new Map();
 const watchers = new Map();
 const processingQueue = [];
 let isWorkerRunning = false;
+
+// --- [NEW FIX] Create session directory if it doesn't exist ---
+// This ensures that whatsapp-web.js has a place to store session files
+// on Render's persistent disk, preventing a "permission denied" error.
+const sessionsPath = path.join('/data', 'wa-sessions');
+fs.ensureDirSync(sessionsPath);
+console.log(`Session directory ensured at: ${sessionsPath}`);
+// --- [END OF NEW FIX] ---
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -75,24 +82,22 @@ io.on('connection', (socket) => {
 
     socket.on('setup_client', ({ clientId }) => {
         if (!clients.has(clientId)) {
-            // --- vvvvvvvvvv  MAJOR CHANGE FOR RENDER DEPLOYMENT vvvvvvvvvv ---
             const newClient = new Client({
                 authStrategy: new LocalAuth({
                     clientId: clientId,
-                    dataPath: '/data/wa-sessions' // This tells it to save session files on our Render Disk
+                    dataPath: sessionsPath // Use the path we ensured exists
                 }),
                 puppeteer: {
                     headless: true,
                     args: [
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage', // Recommended for memory-limited environments
+                        '--disable-dev-shm-usage',
                         '--single-process'
                     ]
                 },
                 webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }
             });
-            // --- ^^^^^^^^^^ END OF MAJOR CHANGE ^^^^^^^^^^ ---
 
             newClient.on('qr', async (qr) => {
                 socket.emit('qr', await qrcode.toDataURL(qr));
