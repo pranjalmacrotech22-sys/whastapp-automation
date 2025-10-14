@@ -1,3 +1,5 @@
+// PASTE THIS ENTIRE CODE INTO YOUR server.js FILE
+
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
@@ -14,20 +16,16 @@ const server = http.createServer(app);
 const io = new Server(server);
 const port = process.env.PORT || 3000;
 
-// --- Supabase Setup ---
 const supabaseUrl = 'https://xcglljpdnofeipgytigz.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 const clients = new Map();
 const watchers = new Map();
 const processingQueue = [];
 let isWorkerRunning = false;
-
-// NOTE: The code to create the directory has been removed as it was causing the crash.
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -49,6 +47,7 @@ io.on('connection', (socket) => {
     console.log(`A user connected with socket ID: ${socket.id}`);
 
     socket.on('verify_client_id', async ({ clientId, accessToken }) => {
+        // ... (rest of the code is the same)
         if (!accessToken) return socket.emit('client_id_error', { message: 'Authentication token is missing.' });
 
         const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
@@ -78,9 +77,9 @@ io.on('connection', (socket) => {
         if (!clients.has(clientId)) {
             const newClient = new Client({
                 authStrategy: new LocalAuth({
-                    clientId: clientId,
-                    // --- [FINAL FIX] Point directly to the root of the persistent disk ---
-                    dataPath: '/data'
+                    clientId: clientId
+                    // The `dataPath` option has been REMOVED.
+                    // The session will be stored temporarily and lost on restart.
                 }),
                 puppeteer: {
                     headless: true,
@@ -111,6 +110,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ... (rest of the file is exactly the same)
     const sendLog = (message) => socket.emit('log', message);
 
     socket.on('start_watching', (paths) => {
