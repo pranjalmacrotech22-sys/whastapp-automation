@@ -26,10 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusElement = document.getElementById('status');
     const qrContainer = document.getElementById('qrcode-container');
     const logElement = document.getElementById('log');
-    const startButton = document.getElementById('startButton');
-    const stopButton = document.getElementById('stopButton');
-    const sourceFolderInput = document.getElementById('sourceFolder');
-    const processedFolderInput = document.getElementById('processedFolder');
+    const xmlFilesInput = document.getElementById('xmlFiles'); // New
+    const uploadButton = document.getElementById('uploadButton'); // New
 
     const showStep = (stepId) => {
         steps.forEach(step => step.classList.remove('active'));
@@ -75,16 +73,16 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('verify_client_id', { clientId, accessToken });
     });
 
-    logoutButton.addEventListener('click', () => {
-        socket.emit('stop_watching', async () => {
-            await supabase.auth.signOut();
-            
-            showStep('email-login-container');
-            logElement.textContent = '';
-            clientIdInput.value = '';
-            qrContainer.innerHTML = '';
-            statusElement.textContent = 'Connecting...';
-        });
+    logoutButton.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        socket.disconnect(); // Disconnect and reconnect to start fresh
+        socket.connect();
+        
+        showStep('email-login-container');
+        logElement.textContent = '';
+        clientIdInput.value = '';
+        qrContainer.innerHTML = '';
+        statusElement.textContent = 'Connecting...';
     });
     
     socket.on('client_id_verified', (data) => {
@@ -97,38 +95,18 @@ document.addEventListener('DOMContentLoaded', () => {
         clientIdError.textContent = data.message;
     });
 
-    const setInputsDisabled = (disabled) => {
-        sourceFolderInput.disabled = disabled;
-        processedFolderInput.disabled = disabled;
-    };
-
     socket.on('qr', (qrCodeDataUrl) => {
         qrContainer.innerHTML = `<img src="${qrCodeDataUrl}" alt="QR Code">`;
         statusElement.textContent = 'Please scan the QR Code to connect.';
-        startButton.disabled = true;
+        uploadButton.disabled = true;
     });
 
     socket.on('ready', () => {
         statusElement.textContent = 'WhatsApp is connected and ready!';
         qrContainer.innerHTML = '';
-        startButton.disabled = false;
+        uploadButton.disabled = false;
     });
 
-    socket.on('watching', () => {
-        statusElement.textContent = 'Actively watching for new files...';
-        startButton.disabled = true;
-        stopButton.disabled = false;
-        setInputsDisabled(true);
-    });
-    
-    socket.on('stopped_watching', () => {
-        statusElement.textContent = 'Stopped watching. Ready to start again.';
-        startButton.disabled = false;
-        stopButton.disabled = true;
-        setInputsDisabled(false);
-        logElement.textContent += '\n--- Watcher Stopped ---\n';
-    });
-    
     socket.on('log', (message) => {
         logElement.textContent += message + '\n';
         logElement.scrollTop = logElement.scrollHeight;
@@ -136,28 +114,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('disconnect', () => {
         statusElement.textContent = 'Disconnected from server. Please refresh.';
-        startButton.disabled = true;
-        stopButton.disabled = true;
-        setInputsDisabled(true);
+        uploadButton.disabled = true;
     });
 
-    startButton.addEventListener('click', () => {
-        const sourcePath = sourceFolderInput.value.trim();
-        const processedPath = processedFolderInput.value.trim();
-        if (!sourcePath || !processedPath) {
-            alert('Please provide paths for both the Source and Processed folders.');
+    // --- [NEW] File Upload Logic ---
+    uploadButton.addEventListener('click', () => {
+        const files = xmlFilesInput.files;
+        if (files.length === 0) {
+            alert('Please select one or more XML files to process.');
             return;
         }
-        logElement.textContent = '--- Watcher Starting ---\n';
-        socket.emit('start_watching', {
-            source: sourcePath,
-            processed: processedPath
-        });
-    });
 
-    stopButton.addEventListener('click', () => {
-        socket.emit('stop_watching', () => {
-             console.log('Server confirmed watcher has stopped.');
-        });
+        uploadButton.disabled = true;
+        logElement.textContent = `--- Starting to upload ${files.length} file(s)... ---\n`;
+
+        // The socket will process one file at a time
+        // We get the file content and send it to the server
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const fileContent = e.target.result;
+                socket.emit('process_file', {
+                    fileName: file.name,
+                    content: fileContent
+                });
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Re-enable the button after a short delay
+        setTimeout(() => {
+            uploadButton.disabled = false;
+            xmlFilesInput.value = ''; // Clear the file input
+        }, 1500);
     });
 });

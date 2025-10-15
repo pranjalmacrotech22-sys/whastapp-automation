@@ -1,5 +1,3 @@
-// PASTE THIS ENTIRE CODE INTO YOUR server.js FILE
-
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
@@ -8,7 +6,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const xml2js = require('xml2js');
 const qrcode = require('qrcode');
-const chokidar = require('chokidar');
+// const chokidar = require('chokidar'); // No longer needed
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -16,6 +14,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 const port = process.env.PORT || 3000;
 
+// Supabase Setup
 const supabaseUrl = 'https://xcglljpdnofeipgytigz.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -23,9 +22,9 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const clients = new Map();
-const watchers = new Map();
-const processingQueue = [];
-let isWorkerRunning = false;
+// const watchers = new Map(); // No longer needed
+// const processingQueue = []; // We process immediately now
+// let isWorkerRunning = false; // No longer needed
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -46,8 +45,8 @@ const releaseClient = async (clientId) => {
 io.on('connection', (socket) => {
     console.log(`A user connected with socket ID: ${socket.id}`);
 
+    // ... (verify_client_id and setup_client are the same)
     socket.on('verify_client_id', async ({ clientId, accessToken }) => {
-        // ... (rest of the code is the same)
         if (!accessToken) return socket.emit('client_id_error', { message: 'Authentication token is missing.' });
 
         const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
@@ -77,22 +76,11 @@ io.on('connection', (socket) => {
         if (!clients.has(clientId)) {
             const newClient = new Client({
                 authStrategy: new LocalAuth({
-                    clientId: clientId
-                    // The `dataPath` option has been REMOVED.
-                    // The session will be stored temporarily and lost on restart.
+                    clientId: clientId,
                 }),
-                puppeteer: {
-                    headless: true,
-                    args: [
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--single-process'
-                    ]
-                },
+                puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] },
                 webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html' }
             });
-
             newClient.on('qr', async (qr) => {
                 socket.emit('qr', await qrcode.toDataURL(qr));
             });
@@ -109,114 +97,66 @@ io.on('connection', (socket) => {
             if (clientEntry && clientEntry.ready) socket.emit('ready');
         }
     });
-
-    // ... (rest of the file is exactly the same)
-    const sendLog = (message) => socket.emit('log', message);
-
-    socket.on('start_watching', (paths) => {
+    
+    // --- [NEW] This replaces the entire file watcher logic ---
+    socket.on('process_file', async ({ fileName, content }) => {
         const { clientId } = socket;
-        if (!clientId || !paths || !paths.source || !paths.processed) return;
-        if (watchers.has(socket.id)) watchers.get(socket.id).close();
-        sendLog(`Starting to watch folder: ${paths.source}`);
-        const watcher = chokidar.watch(paths.source, {
-            ignored: /^\./, persistent: true,
-            awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 100 }
-        });
-        watchers.set(socket.id, watcher);
-        socket.emit('watching');
-        watcher.on('add', (filePath) => {
-            if (path.extname(filePath).toLowerCase() === '.xml') {
-                const clientEntry = clients.get(clientId);
-                if (clientEntry && clientEntry.ready) {
-                    sendLog(`New file queued: ${path.basename(filePath)}`);
-                    processingQueue.push({ client: clientEntry.client, sendLog, filePath, processedFolderPath: paths.processed });
-                    startQueueWorker();
-                } else {
-                    sendLog(`Client for ${clientId} not ready. Cannot process.`);
-                }
-            }
-        });
-        watcher.on('error', (error) => sendLog(`Watcher error: ${error}`));
+        const sendLog = (message) => socket.emit('log', message);
+        
+        sendLog(`--- Received file: ${fileName} ---`);
+
+        const clientEntry = clients.get(clientId);
+        if (!clientEntry || !clientEntry.ready) {
+            return sendLog(`ERROR: WhatsApp client is not ready. Cannot process ${fileName}.`);
+        }
+
+        try {
+            await processSingleFile(clientEntry.client, sendLog, fileName, content);
+        } catch (error) {
+            sendLog(`FATAL ERROR processing ${fileName}: ${error.message}`);
+        }
     });
 
-    socket.on('stop_watching', async (callback) => {
-        if (watchers.has(socket.id)) {
-            watchers.get(socket.id).close();
-            watchers.delete(socket.id);
-        }
-        await releaseClient(socket.clientId);
-        socket.emit('stopped_watching');
-        if (typeof callback === 'function') {
-            callback();
-        }
-    });
 
     socket.on('disconnect', async () => {
-        if (watchers.has(socket.id)) {
-            watchers.get(socket.id).close();
-            watchers.delete(socket.id);
-        }
+        // Release the client ID in Supabase when the user disconnects
         await releaseClient(socket.clientId);
     });
 });
 
-async function startQueueWorker() {
-    if (isWorkerRunning) return;
-    isWorkerRunning = true;
-    while (processingQueue.length > 0) {
-        const job = processingQueue.shift();
-        job.sendLog(`--- Processing: ${path.basename(job.filePath)} ---`);
-        try {
-            await processSingleFile(job.client, job.sendLog, job.filePath, job.processedFolderPath);
-        } catch (error) {
-            job.sendLog(`FATAL ERROR processing ${path.basename(job.filePath)}: ${error.message}`);
-        }
-    }
-    isWorkerRunning = false;
-}
-
-async function processSingleFile(client, sendLog, filePath, processedFolderPath) {
-    const fileName = path.basename(filePath);
+// The processSingleFile function is now simplified
+async function processSingleFile(client, sendLog, fileName, xmlContent) {
     try {
-        const fileBuffer = await fs.readFile(filePath);
-        let xmlData;
-        if (fileBuffer[0] === 0xFF && fileBuffer[1] === 0xFE) {
-            sendLog(`Detected UTF-16 LE encoding for ${fileName}.`);
-            xmlData = fileBuffer.toString('utf16le');
-        } else {
-            sendLog(`Assuming UTF-8 encoding for ${fileName}.`);
-            xmlData = fileBuffer.toString('utf8');
-        }
-        const cleanedXmlData = xmlData.replace(/^\uFEFF/, '');
+        // Clean the BOM character just in case
+        const cleanedXmlData = xmlContent.replace(/^\uFEFF/, '');
         const result = await new xml2js.Parser().parseStringPromise(cleanedXmlData);
+        
         if (!result.ENVELOP) throw new Error(`Missing <ENVELOP> tag.`);
+        
         const countryCode = result.ENVELOP.COUNTRYCODE[0];
         const mobileNumber = result.ENVELOP.MOBILE[0];
         const messageText = result.ENVELOP.TEXT[0];
-        const pdfPath = result.ENVELOP.PATH[0];
+        const pdfPath = result.ENVELOP.PATH ? result.ENVELOP.PATH[0] : null; // Handle optional PDF path
         const chatId = `${countryCode}${mobileNumber}@c.us`;
 
         await client.sendMessage(chatId, messageText);
-        sendLog(`Message sent to ${countryCode}${mobileNumber}`);
+        sendLog(`Message sent to ${countryCode}${mobileNumber} for file ${fileName}`);
 
-        if (pdfPath && pdfPath.trim() !== "" && await fs.exists(pdfPath)) {
-            const media = MessageMedia.fromFilePath(pdfPath);
-            await client.sendMessage(chatId, media);
-            sendLog(`Attachment sent for ${fileName}`);
-        } else if (pdfPath && pdfPath.trim() !== "") {
-            sendLog(`WARNING: Attachment not found at ${pdfPath}`);
+        // The PDF attachment logic will NOT work in this workflow because
+        // the browser cannot access local file paths like "C:\...".
+        // This would have to be implemented with a second file upload input.
+        if (pdfPath && pdfPath.trim() !== "") {
+            sendLog(`WARNING: PDF attachments are not supported in this workflow. Attachment at ${pdfPath} was ignored.`);
         }
-
-        const newPath = path.join(processedFolderPath, fileName);
-        await fs.move(filePath, newPath, { overwrite: true });
-        sendLog(`Moved ${fileName} to processed folder.`);
-
+        
+        sendLog(`Successfully processed ${fileName}.`);
+        
         sendLog(`Waiting for 3 seconds...`);
         await delay(3000);
 
     } catch (error) {
         sendLog(`ERROR processing ${fileName}: ${error.message}`);
-        throw error;
+        throw error; // Propagate error to be caught by the caller
     }
 }
 

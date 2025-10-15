@@ -66,20 +66,16 @@
                 <div id="qrcode-container"></div>
             </div>
 
-            <div class="folder-selection">
+            <!-- [NEW] File Upload Section -->
+            <div class="file-upload-section">
                 <div class="form-group">
-                    <label for="sourceFolder">Source Folder (to watch)</label>
-                    <input type="text" id="sourceFolder" placeholder="/data/source-files">
-                </div>
-                <div class="form-group">
-                    <label for="processedFolder">Processed Folder (to move to)</label>
-                    <input type="text" id="processedFolder" placeholder="/data/processed-files">
+                    <label for="xmlFiles">Select XML Files to Process</label>
+                    <input type="file" id="xmlFiles" accept=".xml" multiple>
                 </div>
             </div>
             
             <div class="button-group">
-                <button id="startButton" class="btn" disabled>Start Watching</button>
-                <button id="stopButton" class="btn btn-danger" disabled>Stop Watching</button>
+                <button id="uploadButton" class="btn" disabled>Upload and Send</button>
             </div>
 
             <div class="status-log">
@@ -91,10 +87,7 @@
 
     <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- [FIXED] The integrity hash has been corrected -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
-    
     <script src="script.js"></script>
 </body>
 </html>
