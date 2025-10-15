@@ -69,11 +69,11 @@
             <div class="folder-selection">
                 <div class="form-group">
                     <label for="sourceFolder">Source Folder (to watch)</label>
-                    <input type="text" id="sourceFolder" placeholder="C:\Path\To\Source">
+                    <input type="text" id="sourceFolder" placeholder="/data/source-files">
                 </div>
                 <div class="form-group">
                     <label for="processedFolder">Processed Folder (to move to)</label>
-                    <input type="text" id="processedFolder" placeholder="C:\Path\To\Processed">
+                    <input type="text" id="processedFolder" placeholder="/data/processed-files">
                 </div>
             </div>
             
@@ -92,8 +92,8 @@
     <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- [FIX] Load Socket.io client from CDN instead of local server -->
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxI+5OPRRrIn9dv1AwnxBrl1Ec6UPYIsjTCde" crossorigin="anonymous"></script>
+    <!-- [FIXED] The integrity hash has been corrected -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
     
     <script src="script.js"></script>
 </body>
