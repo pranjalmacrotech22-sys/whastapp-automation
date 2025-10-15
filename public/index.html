@@ -91,7 +91,10 @@
 
     <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- [FIX] Load Socket.io client from CDN instead of local server -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxI+5OPRRrIn9dv1AwnxBrl1Ec6UPYIsjTCde" crossorigin="anonymous"></script>
+    
     <script src="script.js"></script>
 </body>
 </html>
